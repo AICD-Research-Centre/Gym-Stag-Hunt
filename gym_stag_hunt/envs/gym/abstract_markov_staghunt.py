@@ -43,7 +43,7 @@ class AbstractMarkovStagHuntEnv(Env, ABC):
         """
         return self.game.update(actions)
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Reset the game state
         :return: initial observation

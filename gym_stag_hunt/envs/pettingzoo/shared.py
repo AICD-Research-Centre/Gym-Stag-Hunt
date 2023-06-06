@@ -67,7 +67,7 @@ class PettingZooEnv(ParallelEnv):
     def close(self):
         self.env.close()
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         self.agents = self.possible_agents[:]
         self._agent_selector.reinit(self.agents)
         self.agent_selection = self._agent_selector.next()
@@ -89,7 +89,6 @@ class PettingZooEnv(ParallelEnv):
         rewards = {self.agents[0]: rewards[0], self.agents[1]: rewards[1]}
         dones = {agent: env_done for agent in self.agents}
         infos = {agent: {} for agent in self.agents}
-
         return obs, rewards, dones, infos
 
     def observe(self, agent):

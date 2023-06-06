@@ -101,7 +101,7 @@ class SimpleEnv(Env):
 
         return obs, reward, done, {}
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Reset the game state
         """
