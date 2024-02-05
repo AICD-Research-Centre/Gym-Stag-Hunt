@@ -21,6 +21,9 @@ class StagHunt(AbstractGridGame):
         self,
         stag_reward,
         stag_follows,
+        stag_frozen,
+        stag_random_respawn,
+        agent_random_respawn,
         run_away_after_maul,
         opponent_policy,
         forage_quantity,
@@ -52,6 +55,9 @@ class StagHunt(AbstractGridGame):
 
         # Config
         self._stag_follows = stag_follows
+        self._stag_frozen = stag_frozen
+        self._stag_random_respawn = stag_random_respawn
+        self._agent_random_respawn = agent_random_respawn
         self._run_away_after_maul = run_away_after_maul
         self._opponent_policy = opponent_policy
 
@@ -158,7 +164,8 @@ class StagHunt(AbstractGridGame):
         :return: observation, rewards, is the game done
         """
         # Move Entities
-        self._move_stag()
+        if not self._stag_frozen:
+            self._move_stag()
         if self._enable_multiagent:
             self._move_agents(agent_moves=agent_moves)
         else:
@@ -271,7 +278,11 @@ class StagHunt(AbstractGridGame):
         :return:
         """
         self._reset_agents()
-        self.STAG = [self.GRID_W // 2, self.GRID_H // 2]
+        if self._stag_random_respawn:
+            self.STAG=place_entity_in_unoccupied_cell(self.AGENTS,(self.GRID_W,self.GRID_H))
+        else:
+            self.STAG = [self.GRID_W // 2, self.GRID_H // 2]
+
         self.PLANTS = spawn_plants(
             grid_dims=self.GRID_DIMENSIONS,
             how_many=self._forage_quantity,

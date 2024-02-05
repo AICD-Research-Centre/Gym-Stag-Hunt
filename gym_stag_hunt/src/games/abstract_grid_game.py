@@ -3,6 +3,8 @@ from abc import ABC
 from numpy import zeros, uint8, array
 from numpy.random import choice
 
+from gym_stag_hunt.src.utils import place_entity_in_unoccupied_cell
+
 # Possible Moves
 LEFT = 0
 DOWN = 1
@@ -102,7 +104,11 @@ class AbstractGridGame(ABC):
         Place agents in the top left and top right corners.
         :return:
         """
-        self.A_AGENT, self.B_AGENT = [0, 0], [self.GRID_W - 1, 0]
+        if self._agent_random_respawn:
+            self.A_AGENT = place_entity_in_unoccupied_cell([], (self.GRID_W,self.GRID_H))
+            self.B_AGENT = place_entity_in_unoccupied_cell(self.A_AGENT, (self.GRID_W,self.GRID_H))
+        else:
+            self.A_AGENT, self.B_AGENT = [0, 0], [self.GRID_W - 1, 0]
 
     def _random_move(self, pos):
         """
