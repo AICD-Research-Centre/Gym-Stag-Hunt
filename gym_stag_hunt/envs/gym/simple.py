@@ -32,10 +32,7 @@ class SimpleEnv(Env):
             >= defect_together_reward
             > failed_cooperation_punishment
         ):
-            raise AttributeError(
-                "The game does not qualify as a Stag Hunt, please change parameters so that "
-                "stag_reward > forage_reward_single >= forage_reward_both > mauling_punishment"
-            )
+            print("The game does not qualify as a Stag Hunt, please change parameters so that stag_reward > forage_reward_single >= forage_reward_both > mauling_punishment")
 
         super(SimpleEnv, self).__init__()
 

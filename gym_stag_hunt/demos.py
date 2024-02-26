@@ -39,7 +39,7 @@ def manual_input():
     return i
 
 
-ENV = "ESCALATION"
+ENV = "HUNT"
 
 if __name__ == "__main__":
     env = ENVS[ENV](obs_type="image", enable_multiagent=True)

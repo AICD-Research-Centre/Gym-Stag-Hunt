@@ -37,14 +37,10 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
         :param mauling_punishment: How much reinforcement the agents get for trying to catch a stag alone (MUST be neg.)
         """
         if not (stag_reward > forage_reward >= 0 > mauling_punishment):
-            raise AttributeError(
-                "The game does not qualify as a Stag Hunt, please change parameters so that "
-                "stag_reward > forage_reward >= 0 > mauling_punishment"
+            print("The game does not qualify as a Stag Hunt, please change parameters so that stag_reward > forage_reward >= 0 > mauling_punishment"
             )
         if mauling_punishment == forage_reward:
-            raise AttributeError(
-                "Mauling punishment and forage reward are equal."
-                " Game logic will not function properly."
+            print("Mauling punishment and forage reward are equal. Game logic will not function properly."
             )
         total_cells = grid_size[0] * grid_size[1]
         if (
