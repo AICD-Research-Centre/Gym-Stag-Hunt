@@ -11,5 +11,9 @@ Classifier: Operating System :: OS Independent
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: gym
+Requires-Dist: pygame
+Requires-Dist: opencv-python
+Requires-Dist: pettingzoo
 
 This package is based on openai-gym and created for running experiments on Markov stag hunt games.

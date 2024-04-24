@@ -6,9 +6,9 @@ from gym_stag_hunt.src.utils import print_matrix
 
 
 class AbstractMarkovStagHuntEnv(Env, ABC):
-    metadata = {"render.modes": ["human", "array"], "obs.types": ["image", "coords"]}
+    metadata = {"render.modes": ["human", "array"], "obs.types": ["image", "coords", "grid", "grid_onehot"]}
 
-    def __init__(self, grid_size=(5, 5), obs_type="image", enable_multiagent=False):
+    def __init__(self, grid_size=(5, 5), obs_type="image", enable_multiagent=False, end_ep_on_reward=False):
         """
         :param grid_size: A (W, H) tuple corresponding to the grid dimensions. Although W=H is expected, W!=H works also
         :param obs_type: Can be 'image' for pixel-array based observations, or 'coords' for just the entity coordinates
@@ -33,6 +33,7 @@ class AbstractMarkovStagHuntEnv(Env, ABC):
         self.obs_type = obs_type
         self.done = False
         self.enable_multiagent = enable_multiagent
+        self.end_ep_on_reward = end_ep_on_reward
 
     def step(self, actions):
         """
@@ -42,6 +43,8 @@ class AbstractMarkovStagHuntEnv(Env, ABC):
         :return: observation, rewards, is the game done, additional info
         """
         return self.game.update(actions)
+
+         
 
     def reset(self, seed=None, options=None):
         """

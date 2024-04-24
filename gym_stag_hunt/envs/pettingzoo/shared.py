@@ -2,6 +2,7 @@ from pettingzoo.utils import wrappers
 from pettingzoo import ParallelEnv
 from pettingzoo.utils import agent_selector
 import functools
+import time
 
 
 def default_wrappers(env_init):
@@ -41,6 +42,8 @@ class PettingZooEnv(ParallelEnv):
         }
 
         self.dones = dict(zip(self.agents, [False for _ in self.agents]))
+        if self.env.end_ep_on_reward:
+            self.dones["__all__"] = False
         self.rewards = dict(zip(self.agents, [0.0 for _ in self.agents]))
         self._cumulative_rewards = dict(zip(self.agents, [0.0 for _ in self.agents]))
         self.infos = dict(zip(self.agents, [{} for _ in self.agents]))
@@ -75,6 +78,8 @@ class PettingZooEnv(ParallelEnv):
         self._cumulative_rewards = dict(zip(self.agents, [0.0 for _ in self.agents]))
         self.infos = dict(zip(self.agents, [{} for _ in self.agents]))
         self.dones = dict(zip(self.agents, [False for _ in self.agents]))
+        if self.env.end_ep_on_reward:
+            self.dones["__all__"]=False
         obs = self.env.reset()
         self.accumulated_actions = []
         self.current_observations = {agent: obs for agent in self.agents}
@@ -82,15 +87,46 @@ class PettingZooEnv(ParallelEnv):
 
         return self.current_observations
 
+    
     def step(self, actions):
-        observations, rewards, env_done, info = self.env.step(list(actions.values()))
+        """Calling step in gym/abstract_markov_staghunt.py which calls 
+         update in games/staghunt_game.py """
+        
+        step_observations, step_rewards, step_dones, info = self.env.step(actions)
 
-        obs = {self.agents[0]: observations[0], self.agents[1]: observations[1]}
-        rewards = {self.agents[0]: rewards[0], self.agents[1]: rewards[1]}
-        dones = {agent: env_done for agent in self.agents}
-        infos = {agent: {} for agent in self.agents}
-        return obs, rewards, dones, infos
+        # TODO add config flag for env rendering during training
+        # self.env.render(mode='human')
+        # time.sleep(0.5)
 
+        if self.env.end_ep_on_reward:
+            # Initialize containers for this step's data
+            obs = {}
+            rewards = {}
+            infos = {}
+            local_dones = {}
+
+            for agent_id in list(self.agents):
+                agent_idx = int(str(agent_id)[-1])
+                # Update only if agent is active at the start of this step
+                if not self.dones[agent_id]:
+                    obs[agent_id] = step_observations[agent_idx] 
+                    rewards[agent_id] = step_rewards[agent_idx]
+                    infos[agent_id] = info
+                    self.dones[agent_id] = step_dones[agent_idx]
+                    local_dones[agent_id] = step_dones[agent_idx]
+                    if step_dones[agent_idx]:
+                        self.agents.remove(agent_id)
+                    
+            local_dones["__all__"] = step_dones[-1]
+            self.dones["__all__"] = step_dones[-1]
+            return obs, rewards, local_dones, infos
+        else:
+            obs = {self.agents[0]: step_observations[0], self.agents[1]: step_observations[1]}
+            rewards = {self.agents[0]: step_rewards[0], self.agents[1]: step_rewards[1]}
+            local_dones = {agent: False for agent in self.agents}
+            infos = {agent: {} for agent in self.agents}
+            return obs, rewards, local_dones, infos
+    
     def observe(self, agent):
         return self.current_observations[agent]
 

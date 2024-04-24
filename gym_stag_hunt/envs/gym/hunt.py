@@ -24,6 +24,10 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
         stag_reward=5,
         forage_reward=1,
         mauling_punishment=-5,
+        timestep_penalty=0,
+        end_ep_on_reward=False,
+        no_plants=False,
+        done_bits=False
     ):
         """
         :param grid_size: A (W, H) tuple corresponding to the grid dimensions. Although W=H is expected, W!=H works also
@@ -55,7 +59,8 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
             )
 
         super(HuntEnv, self).__init__(
-            grid_size=grid_size, obs_type=obs_type, enable_multiagent=enable_multiagent
+            grid_size=grid_size, obs_type=obs_type, enable_multiagent=enable_multiagent, 
+            end_ep_on_reward=end_ep_on_reward
         )
 
         self.game_title = "hunt"
@@ -84,9 +89,14 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
             forage_reward=forage_reward,
             mauling_punishment=mauling_punishment,
             opponent_policy=opponent_policy,
+            timestep_penalty=timestep_penalty,
+            end_ep_on_reward=end_ep_on_reward,
+            no_plants=no_plants,
+            done_bits=done_bits
         )
 
         self.action_space = Discrete(5)  # up, down, left, right or stand
+
 
         if obs_type == "image":
             self.observation_space = Box(
@@ -96,6 +106,17 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
                 dtype=uint8,
             )
         elif obs_type == "coords":
-            self.observation_space = Box(
-                0, max(grid_size), shape=(6 + forage_quantity * 2,), dtype=uint8
-            )
+            if done_bits:
+                self.observation_space = Box(
+                    0, (max(grid_size)+5), shape=(8 + forage_quantity * 2,), dtype=uint8
+                )
+            else:
+                self.observation_space = Box(
+                    0, (max(grid_size)+5), shape=(6 + forage_quantity * 2,), dtype=uint8
+                )
+        elif obs_type == "grid":
+            self.observation_space = Box(low=0, high=255, shape=(max(grid_size), max(grid_size)), dtype=uint8)
+        elif obs_type=="grid_onehot":
+            self.observation_space = Box(low=0, high=255, shape=(max(grid_size) * max(grid_size) * 7,), dtype=uint8)
+
+            

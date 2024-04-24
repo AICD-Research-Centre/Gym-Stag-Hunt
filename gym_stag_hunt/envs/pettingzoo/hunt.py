@@ -12,7 +12,7 @@ def raw_env(**kwargs):
 
 
 class ZooHuntEnvironment(PettingZooEnv):
-    metadata = {"render_modes": ["human", "array"], "name": "hunt_pz"}
+    metadata = {"render_modes": ["human", "array"], "name": "hunt_pz", "is_parallelizable":True}
 
     def __init__(
         self,
@@ -31,6 +31,10 @@ class ZooHuntEnvironment(PettingZooEnv):
         stag_reward=5,
         forage_reward=1,
         mauling_punishment=-5,
+        timestep_penalty=0,
+        end_ep_on_reward=False,
+        no_plants=False,
+        done_bits=False
     ):
         hunt_env = HuntEnv(
             grid_size,
@@ -48,5 +52,9 @@ class ZooHuntEnvironment(PettingZooEnv):
             stag_reward,
             forage_reward,
             mauling_punishment,
+            timestep_penalty,
+            end_ep_on_reward,
+            no_plants,
+            done_bits
         )
         super().__init__(og_env=hunt_env)

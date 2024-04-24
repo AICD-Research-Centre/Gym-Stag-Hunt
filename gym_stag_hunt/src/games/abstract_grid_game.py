@@ -68,6 +68,11 @@ class AbstractGridGame(ABC):
         b_obs = a_obs.copy()
         b_obs[0], b_obs[1] = bx, by
         b_obs[2], b_obs[3] = ax, ay
+
+        if self._done_bits:
+            # from A's perspective
+            a_done, b_done = a_obs[-2], a_obs[-1]
+            b_obs[-2], b_obs[-1] = b_done, a_done
         return b_obs
 
     """
@@ -96,8 +101,11 @@ class AbstractGridGame(ABC):
         return self._move_dispatcher()[action](entity_pos)
 
     def _move_agents(self, agent_moves):
-        self.A_AGENT = self._move_entity(self.A_AGENT, agent_moves[0])
-        self.B_AGENT = self._move_entity(self.B_AGENT, agent_moves[1])
+        if 'player_0' in agent_moves and not self._playerA_done:
+                self.A_AGENT = self._move_entity(self.A_AGENT, agent_moves['player_0'])
+
+        if 'player_1' in agent_moves and not self._playerB_done:
+                self.B_AGENT = self._move_entity(self.B_AGENT, agent_moves['player_1'])
 
     def _reset_agents(self):
         """
@@ -224,6 +232,7 @@ class AbstractGridGame(ABC):
     def A_AGENT(self, new_pos):
         self._a_pos[0], self._a_pos[1] = new_pos[0], new_pos[1]
 
+
     @property
     def B_AGENT(self):
         return self._b_pos
@@ -231,6 +240,7 @@ class AbstractGridGame(ABC):
     @B_AGENT.setter
     def B_AGENT(self, new_pos):
         self._b_pos[0], self._b_pos[1] = new_pos[0], new_pos[1]
+
 
     @property
     def RENDERER(self):
