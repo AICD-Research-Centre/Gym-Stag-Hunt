@@ -84,6 +84,13 @@ class AbstractMarkovStagHuntEnv(Env, ABC):
                 self.game.GRID_DIMENSIONS,
             )
 
+    def render_img(self):
+        """
+        Renders the game state as an image
+        :return: image data
+        """
+        return self.game.RENDERER.update()
+
     def close(self):
         """
         Closes all needed resources

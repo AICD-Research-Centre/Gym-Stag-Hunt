@@ -34,7 +34,8 @@ class ZooHuntEnvironment(PettingZooEnv):
         timestep_penalty=0,
         end_ep_on_reward=False,
         no_plants=False,
-        done_bits=False
+        done_bits=False,
+        window_title=None,
     ):
         hunt_env = HuntEnv(
             grid_size,
@@ -55,6 +56,7 @@ class ZooHuntEnvironment(PettingZooEnv):
             timestep_penalty,
             end_ep_on_reward,
             no_plants,
-            done_bits
+            done_bits,
+            window_title,
         )
         super().__init__(og_env=hunt_env)

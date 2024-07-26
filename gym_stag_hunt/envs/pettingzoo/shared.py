@@ -65,7 +65,8 @@ class PettingZooEnv(ParallelEnv):
         return self.env.action_space
 
     def render(self, mode="human"):
-        self.env.render(mode)
+        #self.env.render(mode)
+        return self.env.render_img()
 
     def close(self):
         self.env.close()

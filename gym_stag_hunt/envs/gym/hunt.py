@@ -27,7 +27,8 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
         timestep_penalty=0,
         end_ep_on_reward=False,
         no_plants=False,
-        done_bits=False
+        done_bits=False,
+        window_title=None
     ):
         """
         :param grid_size: A (W, H) tuple corresponding to the grid dimensions. Although W=H is expected, W!=H works also
@@ -69,9 +70,9 @@ class HuntEnv(AbstractMarkovStagHuntEnv):
         self.mauling_punishment = mauling_punishment
         self.reward_range = (mauling_punishment, stag_reward)
 
-        window_title = (
-            "OpenAI Gym - Stag Hunt (%d x %d)" % grid_size
-        )  # create game representation
+        if window_title is None:
+            window_title=("OpenAI Gym - Stag Hunt (%d x %d)" % grid_size)  
+
         self.game = StagHunt(
             window_title=window_title,
             grid_size=grid_size,
