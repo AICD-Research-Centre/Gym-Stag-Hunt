@@ -41,7 +41,7 @@ class AbstractGridGame(ABC):
     Observations
     """
 
-    def get_observation(self):
+    def get_observation(self): 
         """
         :return: observation of the current game state
         """
@@ -101,10 +101,10 @@ class AbstractGridGame(ABC):
         return self._move_dispatcher()[action](entity_pos)
 
     def _move_agents(self, agent_moves):
-        if 'player_0' in agent_moves and not self._playerA_done:
+        if 'player_0' in agent_moves and not self._playerA_done_local:
                 self.A_AGENT = self._move_entity(self.A_AGENT, agent_moves['player_0'])
 
-        if 'player_1' in agent_moves and not self._playerB_done:
+        if 'player_1' in agent_moves and not self._playerB_done_local:
                 self.B_AGENT = self._move_entity(self.B_AGENT, agent_moves['player_1'])
 
     def _reset_agents(self):
@@ -118,11 +118,14 @@ class AbstractGridGame(ABC):
         else:
             self.A_AGENT, self.B_AGENT = [0, 0], [self.GRID_W - 1, 0]
 
-    def _random_move(self, pos):
+    def _random_move(self, pos, no_plants=False):
         """
         :return: a random direction
+        :param pos: current position
+        :param no_plants: if True, the entity will not move onto a cell with a plant
         """
         options = [LEFT, RIGHT, UP, DOWN]
+        # Gather valid moves
         if pos[0] == 0:
             options.remove(LEFT)
         elif pos[0] == self.GRID_W - 1:
@@ -133,9 +136,18 @@ class AbstractGridGame(ABC):
         elif pos[1] == self.GRID_H - 1:
             options.remove(DOWN)
 
+        if no_plants:
+            options = [move for move in options if not self._has_plant(self._move_entity(pos, move))]
+            #print('stag options:', options)
+        
+        if not options:
+            options = [STAND]
+            #print('no valid moves')
+
+        #print('stag options:', options)
         return choice(options)
 
-    def _seek_entity(self, seeker, target):
+    def _seek_entity(self, seeker, target, no_plants=False):
         """
         Returns a move which will move the seeker towards the target.
         :param seeker: entity doing the following
@@ -155,11 +167,31 @@ class AbstractGridGame(ABC):
         if seeker[1] < target[1]:
             options.append(DOWN)
 
-        if not options:
+        if no_plants:
+            options = [move for move in options if not self._has_plant(self._move_entity(seeker, move))]
+            #print('stag options:', options)
+            
+        if not options: # if the seeker is already on the target or surrounded by plants, stand
             options = [STAND]
-        shipback = choice(options)
+            #print('no valid moves')
 
+        #print('stag options:', options)
+        shipback = choice(options) # choose random move which will move seeker to target
         return shipback
+
+    def _has_plant(self, pos):
+        """
+        Checks if the given position has a plant.
+        :param pos: position to check
+        :return: True if the position has a plant, False otherwise
+        """
+        # Implement the logic to check if the position has a plant
+        # You can access the grid or any other necessary variables here
+        # Return True if the position has a plant, False otherwise
+        if self._overlaps_plants(pos, self.PLANTS):
+            return True
+        else:
+            return False  
 
     def _move_left(self, pos):
         """

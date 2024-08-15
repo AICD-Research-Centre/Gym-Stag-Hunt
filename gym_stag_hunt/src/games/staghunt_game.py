@@ -78,7 +78,9 @@ class StagHunt(AbstractGridGame):
         # State Variables
         self._tagged_plants = []  # harvested plants that need to be re-spawned
         self._playerA_done = False
+        self._playerA_done_local = False
         self._playerB_done = False
+        self._playerB_done_local = False
         self._stag_done = False
 
         # Entity Positions
@@ -126,55 +128,48 @@ class StagHunt(AbstractGridGame):
         Calculates the reinforcement rewards for the two agents.
         :return: A tuple R where R[0] is the reinforcement for A_Agent, and R[1] is the reinforcement for B_Agent
         """
+        # determine whether players should be done_local
+        # if player is not locally done
+        # check if playerrs are on stag or on plant
         if overlaps_entity(self.A_AGENT, self.STAG):
-            if overlaps_entity(self.B_AGENT, self.STAG): 
-                # A and B are on stag -> check for successful stag hunt or remaining agent mauled on top of an agent that was already mauled at a previous timestep:
-                if self._playerA_done:
-                    rewards = (0, self._mauling_punishment)
-                elif self._playerB_done:
-                    rewards = (self._mauling_punishment, 0)
-                else: 
-                    rewards = (self._stag_reward, self._stag_reward)  
-            else:
-                # A is on stag, B is not -> A is mauled, check for B's forage status:
-                if self._overlaps_plants(self.B_AGENT, self.PLANTS): 
-                    rewards = (self._mauling_punishment, self._forage_reward)  
-                else:
-                    rewards = (self._mauling_punishment, 0)  
-
-        elif overlaps_entity(self.B_AGENT, self.STAG):
-            # B is on stag, A is not -> B is mauled, check for A's forage status:
-            if self._overlaps_plants(self.A_AGENT, self.PLANTS):
-                rewards = (self._forage_reward, self._mauling_punishment)  
-            else:
-                rewards = (0, self._mauling_punishment)  
+            self._playerA_done_local=True
+            self._stag_done = True
         elif self._overlaps_plants(self.A_AGENT, self.PLANTS):
-            # Neither player on stag, A on plant -> check for B's forage status:
-            if self._overlaps_plants(self.B_AGENT, self.PLANTS):
-                # A and B are on a plant -> allowing agents to double forage same plant for now 
+            self._playerA_done_local=True
+
+        if overlaps_entity(self.B_AGENT, self.STAG):
+            self._playerB_done_local=True
+            self._stag_done = True
+        elif self._overlaps_plants(self.B_AGENT, self.PLANTS):
+            self._playerB_done_local=True
+        
+        
+        # Now we only calculate the actual reward once both players are 'done_local' 
+        if self._playerA_done_local and self._playerB_done_local:
+            if overlaps_entity(self.A_AGENT, self.STAG):
+                if overlaps_entity(self.B_AGENT, self.STAG): 
+                    # A and B are on stag -> 
+                        rewards = (self._stag_reward, self._stag_reward)
+                else:
+                    # A is on stag, B is not -> A is mauled, B foraged:
+                    #(this must be the case if B is now done)
+                    rewards = (self._mauling_punishment, self._forage_reward)  
+            elif overlaps_entity(self.B_AGENT, self.STAG):
+                # B is on stag, A is not -> B is mauled, A foraged
+                rewards = (self._forage_reward, self._mauling_punishment)
+            else:
+                # Neither player on stag, they must have foraged  
                 rewards = (self._forage_reward, self._forage_reward)
-            else:
-                # Only A on plant
-                rewards = (self._forage_reward, 0)
+
+            penalty = self._timestep_penalty if self._timestep_penalty != 0 else 0
+            rewardA, rewardB = (float(rewards[0] + penalty), float(rewards[1] + penalty))
+            return (rewardA, rewardB)
         else:
-            # Neither player on stag, A not on plant -> check for B's forage status:
-            if self._overlaps_plants(self.B_AGENT, self.PLANTS):
-                rewards = 0, self._forage_reward  
-            else:
-                rewards = 0, 0  
-
-        # Adjust for timestep penalty and assign reward regardless of inf/fixed horizon
-        penalty = self._timestep_penalty if self._timestep_penalty != 0 else 0
-        rewardA, rewardB = (float(rewards[0] + penalty), float(rewards[1] + penalty))
-
-        # Removing repeated reward for players on entity if they are done
-        if self._end_ep_on_reward:
-            if self._playerA_done:
-                rewardA = 0
-            if self._playerB_done:
-                rewardB = 0
-
-        return (rewardA, rewardB)
+            # Cannot calculate reward yet
+            rewards=(0,0)
+            penalty = self._timestep_penalty if self._timestep_penalty != 0 else 0
+            rewardA, rewardB = (float(rewards[0] + penalty), float(rewards[1] + penalty))
+            return (rewardA,rewardB)
     
 
     def update(self, agent_moves):
@@ -186,9 +181,10 @@ class StagHunt(AbstractGridGame):
         """
 
         # Move Entities
-        if not self._stag_frozen:
+        if not self._stag_frozen and not self._stag_done:
             self._move_stag()
         if self._enable_multiagent:
+            #TODO ensure only agents that are not locally done move, via mask???
             self._move_agents(agent_moves=agent_moves)
         else:
             if self._opponent_policy == "random":
@@ -196,6 +192,7 @@ class StagHunt(AbstractGridGame):
                     agent_moves=[agent_moves, self._random_move(self.B_AGENT)]
                 )
             elif self._opponent_policy == "pursuit":
+                # TODO: adjust seek_entity function to allow entering plant cell
                 self._move_agents(
                     agent_moves=[
                         agent_moves,
@@ -203,53 +200,18 @@ class StagHunt(AbstractGridGame):
                     ]
                 )
 
-        # Get Rewards
+        """DETERMINING PLAYER ACTIONS THROUGH REWARDS"""
         true_iteration_rewards = self._calc_reward()
+        # Players will only have reward if both are done_local
         
         # Pretend timestep penalty doesn't exist to bypass modifying game logic
         reverse_penalty = (-1*self._timestep_penalty) if self._timestep_penalty != 0 else 0
         penalty_adjusted_iteration_rewards = (true_iteration_rewards[0]+reverse_penalty, true_iteration_rewards[1]+reverse_penalty)
 
-        # Stag was hunted
-        if penalty_adjusted_iteration_rewards == (self._stag_reward, self._stag_reward):
-            if not self._end_ep_on_reward:
-                self.STAG = place_entity_in_unoccupied_cell(
-                    grid_dims=self.GRID_DIMENSIONS,
-                    used_coordinates=self.PLANTS + self.AGENTS + [self.STAG])
-            else:
-                # Players are done for the timestep and episode
-                self._playerA_done, self._playerB_done = True, True
+        if penalty_adjusted_iteration_rewards[0] != 0 and penalty_adjusted_iteration_rewards[1] != 0:
+            self._playerA_done = True
+            self._playerB_done = True
 
-        # One player was mauled
-        if (self._mauling_punishment in penalty_adjusted_iteration_rewards):
-            if self._end_ep_on_reward:
-                # Only want to update done variables if player isn't already 'done'
-                self._playerA_done = self._playerA_done or (not self._playerA_done and penalty_adjusted_iteration_rewards[0] == self._mauling_punishment)
-                self._playerB_done = self._playerB_done or (not self._playerB_done and penalty_adjusted_iteration_rewards[1] == self._mauling_punishment)
-                
-            # Reset stag if needed
-            if self._run_away_after_maul and not self._end_ep_on_reward: 
-                self.STAG = place_entity_in_unoccupied_cell(
-                    grid_dims=self.GRID_DIMENSIONS,
-                    used_coordinates=self.PLANTS + self.AGENTS + [self.STAG],
-                )
-
-        # Atleast one player foraged
-        if self._forage_reward in penalty_adjusted_iteration_rewards:
-            if not self._end_ep_on_reward:
-                # Respawn plants if needed
-                new_plants = respawn_plants(
-                    plants=self.PLANTS,
-                    tagged_plants=self._tagged_plants,
-                    grid_dims=self.GRID_DIMENSIONS,
-                    used_coordinates=self.AGENTS + [self.STAG])
-                self._tagged_plants = []
-                self.PLANTS = new_plants
-            else:
-                # Only want to update done variables if player isn't already 'done'
-                self._playerA_done = self._playerA_done or (not self._playerA_done and penalty_adjusted_iteration_rewards[0] == self._forage_reward)
-                self._playerB_done = self._playerB_done or (not self._playerB_done and penalty_adjusted_iteration_rewards[1] == self._forage_reward)
-    
         info = {}
         obs = self.get_observation()
         dones_all = self._playerA_done and self._playerB_done
@@ -393,7 +355,7 @@ class StagHunt(AbstractGridGame):
     Movement Methods
     """
 
-    def _seek_agent(self, agent_to_seek):
+    def _seek_agent(self, agent_to_seek, no_plants=False):
         """
         Moves the stag towards the specified agent
         :param agent_to_seek: agent to pursue
@@ -403,7 +365,7 @@ class StagHunt(AbstractGridGame):
         if agent_to_seek == "b":
             agent = self.B_AGENT
 
-        move = self._seek_entity(self.STAG, agent)
+        move = self._seek_entity(self.STAG, agent, no_plants)
 
         return self._move_entity(self.STAG, move)
 
@@ -422,13 +384,16 @@ class StagHunt(AbstractGridGame):
             )
 
             if a_dist < b_dist:
-                agent_to_seek = "a" if not self._playerA_done else "b"
+                # if A is closer and not done, seek A, else seek B
+                # what if B is done also? then game is already over
+                agent_to_seek = "a" if not self._playerA_done_local else "b"
             else:
-                agent_to_seek = "b" if not self._playerB_done else "a"
+                # if B is closer and not done, seek B, else seek A
+                agent_to_seek = "b" if not self._playerB_done_local else "a"
 
-            self.STAG = self._seek_agent(agent_to_seek)
+            self.STAG = self._seek_agent(agent_to_seek, no_plants=True)
         else:
-            self.STAG = self._move_entity(self.STAG, self._random_move(self.STAG))
+            self.STAG = self._move_entity(self.STAG, self._random_move(self.STAG, no_plants=True))
 
     def reset_entities(self):
         """
@@ -436,7 +401,9 @@ class StagHunt(AbstractGridGame):
         :return:
         """
         self._playerA_done = False
+        self._playerA_done_local = False
         self._playerB_done = False
+        self._playerB_done_local = False
         self._stag_done = False
         self._reset_agents()
         if self._stag_random_respawn:

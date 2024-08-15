@@ -14,8 +14,8 @@ ENVS = {
 }
 
 
-def print_ep(obs, reward, done, info):
-    print({"observation": obs, "reward": reward, "simulation over": done, "info": info})
+def print_ep(reward, done=None, obs=None):
+    print({"reward": reward, "simulation over": done, "obs": obs})
 
 
 def dir_parse(key):
@@ -42,17 +42,56 @@ def manual_input():
 ENV = "HUNT"
 
 if __name__ == "__main__":
-    env = ENVS[ENV](obs_type="image", enable_multiagent=True)
-    obs = env.reset()
-    for i in range(10000):
-        actions = [env.action_space.sample(), env.action_space.sample()]
 
-        obs, rewards, done, info = env.step(actions=actions)
-        # print_ep(obs, rewards, done, info)
-        sleep(0.4)
-        if ENV == "CLASSIC":
-            env.render(rewards=rewards)
-        else:
-            env.render(mode="human")
+    end_ep_on_reward=True
+    print('hello')
+
+    env = ENVS[ENV](obs_type="image", enable_multiagent=True, timestep_penalty=0, 
+                    end_ep_on_reward=end_ep_on_reward, stag_frozen=False, stag_follows=False, no_plants=False, forage_reward=2, 
+                    mauling_punishment=-1, stag_reward=25, grid_size=(5,5),
+                    agent_random_respawn=False, stag_random_respawn=False, run_away_after_maul=True, forage_quantity=2, done_bits=False)
+    obs = env.reset()
+
+    if end_ep_on_reward:
+        dones = (False,False)
+        while all(dones)==False:
+            env.render(mode='human')
+
+            if not dones[0]:
+                my_action_a=manual_input()
+            else:
+                my_action_a=None
+
+            if not dones[1]:
+                my_action_b=manual_input()
+            else:
+                my_action_b=None
+            
+            actions = {'player_0':my_action_a, 'player_1':my_action_b}
+            obs, rewards, dones, info = env.step(actions=actions)
+            print_ep(reward=rewards, done = dones)
+
+            sleep(0.4)
+            if ENV == "CLASSIC":
+                env.render(rewards=rewards)
+            else:
+                env.render(mode="human")
+    else: 
+            for i in range(10):
+                env.render(mode='human')
+
+                my_action_a=manual_input()
+                my_action_b=manual_input()
+       
+                actions = {'player_0':my_action_a, 'player_1':my_action_b}
+                obs, rewards, dones, info = env.step(actions=actions)
+                print_ep(reward=rewards)
+
+                sleep(0.4)
+                if ENV == "CLASSIC":
+                    env.render(rewards=rewards)
+                else:
+                    env.render(mode="human")
+    print_ep(reward=rewards, done=dones)
     env.close()
     quit()
