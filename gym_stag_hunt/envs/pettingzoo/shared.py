@@ -70,7 +70,7 @@ class PettingZooEnv(ParallelEnv):
     def close(self):
         self.env.close()
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None, options=None, test=None):
         self.agents = self.possible_agents[:]
         self._agent_selector.reinit(self.agents)
         self.agent_selection = self._agent_selector.next()
@@ -80,7 +80,10 @@ class PettingZooEnv(ParallelEnv):
         self.dones = dict(zip(self.agents, [False for _ in self.agents]))
         if self.env.end_ep_on_reward:
             self.dones["__all__"]=False
-        obs = self.env.reset()
+        if options is not None:
+            obs = self.env.reset(options)
+        else:
+            obs = self.env.reset()
         self.accumulated_actions = []
         self.current_observations = {agent: obs for agent in self.agents}
         self.t = 0

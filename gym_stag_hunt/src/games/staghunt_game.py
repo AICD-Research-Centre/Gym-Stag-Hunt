@@ -430,7 +430,7 @@ class StagHunt(AbstractGridGame):
         else:
             self.STAG = self._move_entity(self.STAG, self._random_move(self.STAG))
 
-    def reset_entities(self):
+    def reset_entities(self, options=None):
         """
         Reset all entity positions.
         :return:
@@ -438,20 +438,29 @@ class StagHunt(AbstractGridGame):
         self._playerA_done = False
         self._playerB_done = False
         self._stag_done = False
-        self._reset_agents()
-        if self._stag_random_respawn:
-            self.STAG=place_entity_in_unoccupied_cell(self.AGENTS,(self.GRID_W,self.GRID_H))
+        if options is None:
+            self._reset_agents()
+            if self._stag_random_respawn:
+                self.STAG=place_entity_in_unoccupied_cell(self.AGENTS,(self.GRID_W,self.GRID_H))
+            else:
+                self.STAG = [self.GRID_W // 2, self.GRID_H // 2]
+            
+            if self._no_plants:
+                self.PLANTS = [[9,9],[9,9]]
+            else:
+                self.PLANTS = spawn_plants(
+                        grid_dims=self.GRID_DIMENSIONS,
+                        how_many=self._forage_quantity,
+                        used_coordinates=self.AGENTS + [self.STAG],
+                    )
         else:
-            self.STAG = [self.GRID_W // 2, self.GRID_H // 2]
-        
-        if self._no_plants:
-            self.PLANTS = [[9,9],[9,9]]
-        else:
-            self.PLANTS = spawn_plants(
-                    grid_dims=self.GRID_DIMENSIONS,
-                    how_many=self._forage_quantity,
-                    used_coordinates=self.AGENTS + [self.STAG],
-                )
+            # assume options is 10 elem array of entity positions
+            self.STAG = [options[4], options[5]]
+            self.PLANTS = [[options[6], options[7]], [options[8], options[9]]]
+            self.A_AGENT = [options[0], options[1]]
+            self.B_AGENT = [options[2], options[3]]
+
+                           
 
     """
     Properties
